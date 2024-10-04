@@ -2,14 +2,33 @@ package crypto
 
 import (
 	"crypto/ecdsa"
+	"crypto/rand"
 	"crypto/x509"
 	"encoding/pem"
+	"fmt"
 )
 
 // ECCKeyPair is a DTO that holds ECC private and public keys.
 type ECCKeyPair struct {
 	Public  *ecdsa.PublicKey
 	Private *ecdsa.PrivateKey
+}
+
+func (ec ECCKeyPair) Sign(dataToBeSigned []byte) ([]byte, error) {
+	// if the bit length of the key is smaller than the hashed message it will be
+	// truncated during signature, see https://pkg.go.dev/crypto/ecdsa@go1.21.0#SignASN1
+	digestBits := DigestAlgorithm.Size() * 8
+	keyBits := ec.Private.Curve.Params().N.BitLen()
+	if digestBits >= keyBits {
+		return nil, fmt.Errorf("error: message digest too long, %d bits for a key of %d bits", digestBits, keyBits)
+	}
+	digest := Digest(dataToBeSigned)
+	ret, err := ecdsa.SignASN1(rand.Reader, ec.Private, digest)
+	if err != nil {
+		return nil, fmt.Errorf("error while signing payload: %w", err)
+	}
+
+	return ret, nil
 }
 
 // ECCMarshaler can encode and decode an ECC key pair.

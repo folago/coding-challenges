@@ -1,15 +1,27 @@
 package crypto
 
 import (
+	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"fmt"
 )
 
 // RSAKeyPair is a DTO that holds RSA private and public keys.
 type RSAKeyPair struct {
 	Public  *rsa.PublicKey
 	Private *rsa.PrivateKey
+}
+
+func (rp RSAKeyPair) Sign(dataToBeSigned []byte) ([]byte, error) {
+	// TODO: check if the length of the digest is OK for sign algo
+	digest := Digest(dataToBeSigned)
+	ret, err := rsa.SignPSS(rand.Reader, rp.Private, DigestAlgorithm, digest[:], nil)
+	if err != nil {
+		return nil, fmt.Errorf("error while signing payload: %w", err)
+	}
+	return ret, nil
 }
 
 // RSAMarshaler can encode and decode an RSA key pair.
