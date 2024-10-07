@@ -1,0 +1,45 @@
+http://localhost:8080
+POST /api/v0/devices
+{
+  "device_id": "aaaa-bbbb-ccccc-dddd",
+  "algorithm": "RSA",
+  "label": "cool device"
+}
+
+http://localhost:8080
+GET /api/v0/devices
+
+http://localhost:8080
+DELETE /api/v0/devices/aaaa-bbbb-ccccc-dddd
+
+http://localhost:8080
+POST /api/v0/signatures
+{
+  "device_id": "aaaa-bbbb-ccccc-dddd",
+  "data": "aGVsbG8gd29ybGQK" 
+}
+# "aGVsbG8gd29ybGQK" is "hello world" in base64 
+
+http://localhost:8080
+GET /api/v0/signatures
+
+http://localhost:8080
+GET /api/v0/health
+
+
+# another device with elliptic curve 
+http://localhost:8080
+POST /api/v0/devices
+{
+  "device_id": "1111-2222-3333-4444",
+  "algorithm": "ECC",
+  "label": "curved device"
+}
+
+http://localhost:8080
+POST /api/v0/signatures
+{
+  "device_id": "1111-2222-3333-4444",
+  "data": "aGVsbG8gY3VydmVkIHdvcmxkCg=="
+}
+# "aGVsbG8gY3VydmVkIHdvcmxkCg==" is "hello curved world" in base 64
