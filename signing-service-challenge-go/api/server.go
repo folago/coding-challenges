@@ -2,12 +2,17 @@ package api
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
+	"time"
+
+	"github.com/fiskaly/coding-challenges/signing-service-challenge/persistence"
+	"github.com/fiskaly/coding-challenges/signing-service-challenge/service"
 )
 
 // Response is the generic API response container.
 type Response struct {
-	Data interface{} `json:"data"`
+	Data interface{} `json:"data,omitempty"`
 }
 
 // ErrorResponse is the generic error API response container.
@@ -18,24 +23,35 @@ type ErrorResponse struct {
 // Server manages HTTP requests and dispatches them to the appropriate services.
 type Server struct {
 	listenAddress string
+	singin        service.Signer
 }
 
 // NewServer is a factory to instantiate a new Server.
 func NewServer(listenAddress string) *Server {
+
 	return &Server{
 		listenAddress: listenAddress,
-		// TODO: add services / further dependencies here ...
+		singin: service.NewSignerService(
+			persistence.NewMemDeviceRepository(),
+			persistence.NewMemSignatureRepository()),
 	}
 }
 
 // Run registers all HandlerFuncs for the existing HTTP routes and starts the Server.
+// TODO: add more middlewares, at least a recovery one
 func (s *Server) Run() error {
 	mux := http.NewServeMux()
 
-	mux.Handle("/api/v0/health", http.HandlerFunc(s.Health))
+	mux.Handle("GET /api/v0/health", logs(s.Health))
 
-	// TODO: register further HandlerFuncs here ...
+	mux.Handle("POST /api/v0/devices", logs(s.CreateSignatureDevice))
+	mux.Handle("GET /api/v0/devices", logs(s.ListDevices))
+	mux.Handle("DELETE /api/v0/devices/{id}", logs(s.DeleteDevice))
 
+	mux.Handle("POST /api/v0/signatures", logs(s.SignTransaction))
+	mux.Handle("GET /api/v0/signatures", logs(s.ListTransactions))
+
+	slog.Info("server running", "address", s.listenAddress)
 	return http.ListenAndServe(s.listenAddress, mux)
 }
 
@@ -77,4 +93,11 @@ func WriteAPIResponse(w http.ResponseWriter, code int, data interface{}) {
 	}
 
 	w.Write(bytes)
+}
+
+func logs(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		slog.Info("request", "method", r.Method, "url", r.URL, "ts", time.Now())
+		next(w, r)
+	}
 }
